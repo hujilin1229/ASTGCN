@@ -2,9 +2,13 @@
 
 import numpy as np
 import mxnet as mx
-
 from .utils import get_sample_indices
 
+import h5py
+import os
+import datetime
+import re
+import pickle
 
 def normalization(train, val, test):
     '''
@@ -81,6 +85,196 @@ def read_and_generate_dataset(graph_signal_matrix_filename,
             np.expand_dims(hour_sample, axis=0).transpose((0, 2, 3, 1)),
             np.expand_dims(target, axis=0).transpose((0, 2, 3, 1))[:, :, 0, :]
         ))
+
+    split_line1 = int(len(all_samples) * 0.6)
+    split_line2 = int(len(all_samples) * 0.8)
+
+    if not merge:
+        training_set = [np.concatenate(i, axis=0)
+                        for i in zip(*all_samples[:split_line1])]
+    else:
+        print('Merge training set and validation set!')
+        training_set = [np.concatenate(i, axis=0)
+                        for i in zip(*all_samples[:split_line2])]
+
+    validation_set = [np.concatenate(i, axis=0)
+                      for i in zip(*all_samples[split_line1: split_line2])]
+    testing_set = [np.concatenate(i, axis=0)
+                   for i in zip(*all_samples[split_line2:])]
+
+    train_week, train_day, train_hour, train_target = training_set
+    val_week, val_day, val_hour, val_target = validation_set
+    test_week, test_day, test_hour, test_target = testing_set
+
+    print('training data: week: {}, day: {}, recent: {}, target: {}'.format(
+        train_week.shape, train_day.shape,
+        train_hour.shape, train_target.shape))
+    print('validation data: week: {}, day: {}, recent: {}, target: {}'.format(
+        val_week.shape, val_day.shape, val_hour.shape, val_target.shape))
+    print('testing data: week: {}, day: {}, recent: {}, target: {}'.format(
+        test_week.shape, test_day.shape, test_hour.shape, test_target.shape))
+
+    (week_stats, train_week_norm,
+     val_week_norm, test_week_norm) = normalization(train_week,
+                                                    val_week,
+                                                    test_week)
+
+    (day_stats, train_day_norm,
+     val_day_norm, test_day_norm) = normalization(train_day,
+                                                  val_day,
+                                                  test_day)
+
+    (recent_stats, train_recent_norm,
+     val_recent_norm, test_recent_norm) = normalization(train_hour,
+                                                        val_hour,
+                                                        test_hour)
+
+    all_data = {
+        'train': {
+            'week': train_week_norm,
+            'day': train_day_norm,
+            'recent': train_recent_norm,
+            'target': train_target,
+        },
+        'val': {
+            'week': val_week_norm,
+            'day': val_day_norm,
+            'recent': val_recent_norm,
+            'target': val_target
+        },
+        'test': {
+            'week': test_week_norm,
+            'day': test_day_norm,
+            'recent': test_recent_norm,
+            'target': test_target
+        },
+        'stats': {
+            'week': week_stats,
+            'day': day_stats,
+            'recent': recent_stats
+        }
+    }
+
+    return all_data
+
+
+def return_date(file_name):
+    """Auxilliary function which returns datetime object from Traffic4Cast filename.
+
+        Args.:
+            file_name (str): file name, e.g., '20180516_100m_bins.h5'
+
+        Returns: date string, e.g., '2018-05-16'
+    """
+
+    match = re.search(r'\d{4}\d{2}\d{2}', file_name)
+    date = datetime.datetime.strptime(match.group(), '%Y%m%d').date()
+    return date
+
+def read_and_generate_dataset_from_files(data_dir, node_pos,
+                                         num_of_weeks, num_of_days,
+                                         num_of_hours, num_for_predict,
+                                         points_per_hour=12, merge=False):
+    '''
+    Parameters
+    ----------
+    graph_signal_matrix_filename: str, path of graph signal matrix file
+
+    num_of_weeks, num_of_days, num_of_hours: int
+
+    num_for_predict: int
+
+    points_per_hour: int, default 12, depends on data
+
+    merge: boolean, default False,
+           whether to merge training set and validation set to train model
+
+    Returns
+    ----------
+    feature: np.ndarray,
+             shape is (num_of_samples, num_of_batches * points_per_hour,
+                       num_of_vertices, num_of_features)
+
+    target: np.ndarray,
+            shape is (num_of_samples, num_of_vertices, num_for_predict)
+
+    '''
+
+    if os.path.exists(data_dir):
+        with open(data_dir, 'rb') as f:
+            all_samples = pickle.load(f)
+        # container = np.load(data_dir)
+        # all_samples = [container[key] for key in container]
+    else:
+        all_samples = []
+        data_dir_folder = os.path.dirname(data_dir)
+        data_dir_folder = os.path.join(data_dir_folder, '..', 'astgcn_train_val')
+        files = os.listdir(data_dir_folder)
+        for f in files:
+            cur_date = return_date(f)
+            weeks_data = []
+            days_data = []
+            # check the existence of the previous week files
+            for i in range(1, num_of_weeks+1):
+                start_delta = datetime.timedelta(weeks=i)
+                prev_date = cur_date - start_delta
+                prev_data_str = prev_date.strftime("%Y%m%d")
+                prev_data_file = prev_data_str + '_100m_bins.h5'
+                if not os.path.exists(data_dir_folder + '/' + prev_data_file):
+                    break
+                else:
+                    prev_data_File = h5py.File(data_dir_folder + '/' + prev_data_file)
+                    prev_data = prev_data_File['array'].value
+                    prev_data_File.close()
+                    weeks_data.append(prev_data[:, node_pos[:, 0], node_pos[:, 1], :])
+            if len(weeks_data) < num_of_weeks:
+                continue
+
+            # check the existence of the previous days files
+            for i in range(1, num_of_days+1):
+                start_delta = datetime.timedelta(days=i)
+                prev_date = cur_date - start_delta
+                prev_data_str = prev_date.strftime("%Y%m%d")
+                prev_data_file = prev_data_str + '_100m_bins.h5'
+                if not os.path.exists(data_dir_folder + '/' + prev_data_file):
+                    break
+                else:
+                    prev_data_File = h5py.File(data_dir_folder + '/' + prev_data_file)
+                    prev_data = prev_data_File['array'].value
+                    prev_data_File.close()
+                    days_data.append(prev_data[:, node_pos[:, 0], node_pos[:, 1], :])
+            if len(days_data) < num_of_weeks:
+                continue
+
+            cur_data_File = h5py.File(data_dir_folder + '/' + f)
+            cur_data = cur_data_File['array'].value
+            cur_data_File.close()
+            cur_data = cur_data[:, node_pos[:, 0], node_pos[:, 1], :]
+
+            num_time_slots = cur_data.shape[0]
+            for i in range(num_of_hours*points_per_hour, num_time_slots - num_for_predict, num_for_predict):
+                hour_sample = cur_data[i-num_of_hours*points_per_hour:i]
+                target = cur_data[i:i+num_for_predict]
+                week_sample = []
+                for week_data in weeks_data:
+                    week_sample.append(week_data[i:i+num_for_predict])
+                day_sample = []
+                for day_data in days_data:
+                    day_sample.append(day_data[i:i+num_for_predict])
+                week_sample = np.concatenate(week_sample, axis=0)
+                day_sample = np.concatenate(day_sample, axis=0)
+
+                all_samples.append((
+                    np.expand_dims(week_sample, axis=0).transpose((0, 2, 3, 1)),
+                    np.expand_dims(day_sample, axis=0).transpose((0, 2, 3, 1)),
+                    np.expand_dims(hour_sample, axis=0).transpose((0, 2, 3, 1)),
+                    # np.expand_dims(target, axis=0).transpose((0, 2, 3, 1))[:, :, 0, :]
+                    np.expand_dims(target, axis=0).transpose((0, 2, 3, 1))
+                ))
+
+        with open(data_dir, 'wb') as f:
+            pickle.dump(all_samples, f)
+        # np.savez(data_dir, *all_samples)
 
     split_line1 = int(len(all_samples) * 0.6)
     split_line2 = int(len(all_samples) * 0.8)
