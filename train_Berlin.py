@@ -16,8 +16,8 @@ from mxnet import autograd
 from mxboard import SummaryWriter
 
 from lib.utils import compute_val_loss, evaluate, predict
-from lib.data_preparation import read_and_generate_dataset
-from model.model_config import get_backbones
+from lib.data_preparation import read_and_generate_dataset, read_and_generate_dataset_from_files
+from model.model_config import get_backbones, get_backbones_traffic4cast
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str,
@@ -40,8 +40,9 @@ training_config = config['Training']
 
 adj_filename = data_config['adj_filename']
 node_pos_filename = data_config['node_pos_filename']
-graph_signal_matrix_filename = data_config['graph_signal_matrix_filename']
-num_of_vertices = int(data_config['num_of_vertices'])
+data_dir = data_config['data_dir']
+
+# num_of_vertices = int(data_config['num_of_vertices'])
 points_per_hour = int(data_config['points_per_hour'])
 num_for_predict = int(data_config['num_for_predict'])
 
@@ -105,14 +106,15 @@ if __name__ == "__main__":
     # read all data from graph signal matrix file
     print("Reading data...")
     node_pos = np.load(node_pos_filename)
-
-    all_data = read_and_generate_dataset(graph_signal_matrix_filename,
-                                         num_of_weeks,
-                                         num_of_days,
-                                         num_of_hours,
-                                         num_for_predict,
-                                         points_per_hour,
-                                         merge)
+    num_of_vertices = node_pos.shape[0]
+    all_data = read_and_generate_dataset_from_files(data_dir,
+                                                    node_pos,
+                                                    num_of_weeks,
+                                                    num_of_days,
+                                                    num_of_hours,
+                                                    num_for_predict,
+                                                    points_per_hour,
+                                                    merge)
 
     # test set ground truth
     true_value = (all_data['test']['target'].transpose((0, 2, 1))
@@ -169,7 +171,7 @@ if __name__ == "__main__":
     loss_function = gluon.loss.L2Loss()
 
     # get model's structure
-    all_backbones = get_backbones(args.config, adj_filename, ctx)
+    all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx)
 
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
