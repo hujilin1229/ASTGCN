@@ -208,7 +208,7 @@ def read_and_generate_dataset_from_files(data_dir, node_pos,
     else:
         all_samples = []
         data_dir_folder = os.path.dirname(data_dir)
-        data_dir_folder = os.path.join(data_dir_folder, '..', 'astgcn_train_val')
+        data_dir_folder = os.path.join(data_dir_folder, '..', 'train_val')
         files = os.listdir(data_dir_folder)
         for f in files:
             cur_date = return_date(f)

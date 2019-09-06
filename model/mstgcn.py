@@ -148,7 +148,7 @@ class MSTGCN_submodule(nn.Block):
             # use convolution to generate the prediction
             # instead of using the fully connected layer
             self.final_conv = nn.Conv2D(
-                channels=num_for_prediction,
+                channels=num_for_prediction*backbones[-1]['num_of_features'], # modified here by multiplying 3
                 kernel_size=(1, backbones[-1]['num_of_time_filters']))
             self.W = self.params.get("W", allow_deferred_init=True)
 

@@ -116,9 +116,17 @@ if __name__ == "__main__":
                                                     points_per_hour,
                                                     merge)
 
-    # test set ground truth
-    true_value = (all_data['test']['target'].transpose((0, 2, 1))
+    # test set ground truth,
+    # the original target shape is (#batch, #vertices, #pred)
+    # the transposed target shape is (#batch, #pred, #vertices)
+    true_value = (all_data['test']['target'].transpose((0, 2, 3, 1))
                   .reshape(all_data['test']['target'].shape[0], -1))
+
+    # reshape the target data for all sets
+    all_data['train']['target'] = all_data['train']['target'].reshape(
+        all_data['train']['target'].shape[0], all_data['train']['target'].shape[1], -1)
+    all_data['val']['target'] = all_data['val']['target'].reshape(
+        all_data['val']['target'].shape[0], all_data['val']['target'].shape[1], -1)
 
     # training set data loader
     train_loader = gluon.data.DataLoader(

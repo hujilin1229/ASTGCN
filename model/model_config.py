@@ -69,6 +69,7 @@ def get_backbones(config_filename, adj_filename, ctx):
             "num_of_chev_filters": 64,
             "num_of_time_filters": 64,
             "time_conv_strides": 1,
+            "num_of_features": 1,
             "cheb_polynomials": cheb_polynomials
         }
     ]
@@ -144,6 +145,7 @@ def get_backbones_traffic4cast(config_filename, adj_filename, ctx):
             "num_of_chev_filters": 64,
             "num_of_time_filters": 64,
             "time_conv_strides": 1,
+            "num_of_features": 3, # for traffic4cast is 3, otherwise 1
             "cheb_polynomials": cheb_polynomials
         }
     ]
