@@ -117,22 +117,22 @@ def get_backbones_traffic4cast(config_filename, adj_filename, ctx):
         }
     ]
 
-    # backbones2 = [
-    #     {
-    #         "K": K,
-    #         "num_of_chev_filters": 32,
-    #         "num_of_time_filters": 32,
-    #         "time_conv_strides": num_of_days,
-    #         "cheb_polynomials": cheb_polynomials
-    #     },
-    #     {
-    #         "K": K,
-    #         "num_of_chev_filters": 32,
-    #         "num_of_time_filters": 32,
-    #         "time_conv_strides": 1,
-    #         "cheb_polynomials": cheb_polynomials
-    #     }
-    # ]
+    backbones2 = [
+        {
+            "K": K,
+            "num_of_chev_filters": num_filters,
+            "num_of_time_filters": num_filters,
+            "time_conv_strides": num_of_days,
+            "cheb_polynomials": cheb_polynomials
+        },
+        {
+            "K": K,
+            "num_of_chev_filters": num_filters,
+            "num_of_time_filters": num_filters,
+            "time_conv_strides": 1,
+            "cheb_polynomials": cheb_polynomials
+        }
+    ]
 
     backbones3 = [
         {
@@ -154,7 +154,7 @@ def get_backbones_traffic4cast(config_filename, adj_filename, ctx):
 
     all_backbones = [
         backbones1,
-        # backbones2,
+        backbones2,
         backbones3
     ]
 
