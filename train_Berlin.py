@@ -210,7 +210,6 @@ if __name__ == "__main__":
     # train model
     global_step = 1
     for epoch in range(1, epochs + 1):
-
         for train_w, train_d, train_r, train_t in train_loader:
             # running on single gpu
             train_w = train_w.as_in_context(ctx)
