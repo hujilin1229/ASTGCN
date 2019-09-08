@@ -184,8 +184,8 @@ class Temporal_Attention_layer(nn.Block):
         # print(x)
         # compute temporal attention scores
         # shape is (N, T, V)
-        context.current_context()
-        print(context)
+        # context.current_context()
+        print(context.current_context())
 
         lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data()),
                      self.U_2.data())
