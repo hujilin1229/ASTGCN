@@ -173,6 +173,7 @@ class Temporal_Attention_layer(nn.Block):
         for param in [self.U_1, self.U_2, self.U_3, self.b_e, self.V_e]:
             param._finish_deferred_init()
 
+        print(x)
         # compute temporal attention scores
         # shape is (N, T, V)
         lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data()),
