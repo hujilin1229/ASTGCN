@@ -3,7 +3,7 @@
 
 from mxnet import nd
 from mxnet.gluon import nn
-
+from mxnet.gluon.parameter import context
 
 class Spatial_Attention_layer(nn.Block):
     '''
@@ -173,17 +173,20 @@ class Temporal_Attention_layer(nn.Block):
         for param in [self.U_1, self.U_2, self.U_3, self.b_e, self.V_e]:
             param._finish_deferred_init()
 
-        print(x)
-        print(self.U_1.data())
-        print(self.U_2.data())
-        print("=========================")
-        print("Context of Variables")
-        print("x::{0}, D1::{1}, D2::{2}".format(x.context, self.U_1.data().context, self.U_2.data().context))
-        print("=========================")
+        # print(x)
+        # print(self.U_1.data())
+        # print(self.U_2.data())
+        # print("=========================")
+        # print("Context of Variables")
+        # print("x::{0}, D1::{1}, D2::{2}".format(x.context, self.U_1.data().context, self.U_2.data().context))
+        # print("=========================")
 
         # print(x)
         # compute temporal attention scores
         # shape is (N, T, V)
+        context.current_context()
+        print(context)
+
         lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data()),
                      self.U_2.data())
 
