@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     # loss function MSE
     loss_function = gluon.loss.L2Loss()
-
+    metric = mx.metric.Accuracy()
     # get model's structure
     all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx)
 
@@ -212,12 +212,11 @@ if __name__ == "__main__":
     for epoch in range(1, epochs + 1):
 
         for train_w, train_d, train_r, train_t in train_loader:
+            # running on single gpu
             train_w = train_w.as_in_context(ctx)
             train_d = train_d.as_in_context(ctx)
             train_r = train_r.as_in_context(ctx)
             train_t = train_t.as_in_context(ctx)
-
-            start_time = time()
 
             with autograd.record():
                 output = net([train_w, train_d, train_r])
@@ -225,6 +224,31 @@ if __name__ == "__main__":
             l.backward()
             trainer.step(train_t.shape[0])
             training_loss = l.mean().asscalar()
+
+            sw.add_scalar(tag='training_loss',
+                          value=training_loss,
+                          global_step=global_step)
+
+            actual_batch_size = train_w.shape[0]
+            # running on multi-gpus
+            train_w = gluon.utils.split_and_load(train_w, ctx_list=ctx, even_split=False)
+            train_d = gluon.utils.split_and_load(train_d, ctx_list=ctx, even_split=False)
+            train_r = gluon.utils.split_and_load(train_r, ctx_list=ctx, even_split=False)
+            train_t = gluon.utils.split_and_load(train_t, ctx_list=ctx, even_split=False)
+            start_time = time()
+            with autograd.record():
+                outputs = [net(w, d, r) for w, d, r in zip(train_w, train_d, train_r)]
+                losses = [loss_function(o, l) for o, l in zip(outputs, train_t)]
+            for loss in losses:
+                loss.backward()
+
+            # update metric for each output
+            for label, o in zip(train_t, outputs):
+                metric.update(label, o)
+
+            # Update the parameters by stepping the trainer; the batch size
+            # is required to normalize the gradients by `1 / batch_size`.
+            trainer.step(batch_size=actual_batch_size, ignore_stale_grad=True)
 
             sw.add_scalar(tag='training_loss',
                           value=training_loss,

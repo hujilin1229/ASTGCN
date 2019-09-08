@@ -4,7 +4,7 @@
 import csv
 import numpy as np
 from scipy.sparse.linalg import eigs
-
+from mxnet import gluon
 from .metrics import mean_absolute_error, mean_squared_error, masked_mape_np
 
 
@@ -265,6 +265,124 @@ def predict(net, test_loader, ctx):
 
 
 def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
+    '''
+    compute MAE, RMSE, MAPE scores of the prediction
+    for 3, 6, 12 points on testing set
+
+    Parameters
+    ----------
+    net: model
+
+    test_loader: gluon.data.DataLoader
+
+    true_value: np.ndarray, all ground truth of testing set
+                shape is (num_of_samples, num_for_predict, num_of_vertices)
+
+    num_of_vertices: int, number of vertices
+
+    sw: mxboard.SummaryWriter
+
+    epoch: int, current epoch
+
+    '''
+    prediction = predict(net, test_loader, ctx)
+    prediction = (prediction.transpose((0, 2, 1))
+                  .reshape(prediction.shape[0], -1))
+    for i in [3, 6, 12]:
+        print('current epoch: %s, predict %s points' % (epoch, i))
+
+        mae = mean_absolute_error(true_value[:, : i * num_of_vertices],
+                                  prediction[:, : i * num_of_vertices])
+        rmse = mean_squared_error(true_value[:, : i * num_of_vertices],
+                                  prediction[:, : i * num_of_vertices]) ** 0.5
+        mape = masked_mape_np(true_value[:, : i * num_of_vertices],
+                              prediction[:, : i * num_of_vertices], 0)
+
+        print('MAE: %.2f' % (mae))
+        print('RMSE: %.2f' % (rmse))
+        print('MAPE: %.2f' % (mape))
+        print()
+        sw.add_scalar(tag='MAE_%s_points' % (i),
+                      value=mae,
+                      global_step=epoch)
+        sw.add_scalar(tag='RMSE_%s_points' % (i),
+                      value=rmse,
+                      global_step=epoch)
+        sw.add_scalar(tag='MAPE_%s_points' % (i),
+                      value=mape,
+                      global_step=epoch)
+
+
+def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
+    '''
+    compute mean loss on validation set
+
+    Parameters
+    ----------
+    net: model
+
+    val_loader: gluon.data.DataLoader
+
+    loss_function: func
+
+    sw: mxboard.SummaryWriter
+
+    epoch: int, current epoch
+
+    '''
+    val_loader_length = len(val_loader)
+    tmp = []
+    for index, (val_w, val_d, val_r, val_t) in enumerate(val_loader):
+        val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
+        val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
+        val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
+        val_t = gluon.utils.split_and_load(val_t, ctx_list=ctx, even_split=False)
+
+        outputs = [net(w, d, r) for w, d, r in zip(val_w, val_d, val_r)]
+        losses = [loss_function(o, l) for o, l in zip(outputs, val_t)]
+        losses = [l.asnumpy() for l in losses]
+        tmp.extend(losses)
+        print('validation batch %s / %s, loss: %.2f' % (
+            index + 1, val_loader_length, l.mean().asscalar()))
+
+    validation_loss = sum(tmp) / len(tmp)
+    sw.add_scalar(tag='validation_loss',
+                  value=validation_loss,
+                  global_step=epoch)
+    print('epoch: %s, validation loss: %.2f' % (epoch, validation_loss))
+
+def predict_multigpu(net, test_loader, ctx):
+    '''
+    predict
+
+    Parameters
+    ----------
+    net: model
+
+    test_loader: gluon.data.DataLoader
+
+    Returns
+    ----------
+    prediction: np.ndarray,
+                shape is (num_of_samples, num_of_vertices, num_for_predict)
+
+    '''
+
+    test_loader_length = len(test_loader)
+    prediction = []
+    for index, (test_w, test_d, test_r, _) in enumerate(test_loader):
+        test_w = gluon.utils.split_and_load(test_w, ctx_list=ctx, even_split=False)
+        test_d = gluon.utils.split_and_load(test_d, ctx_list=ctx, even_split=False)
+        test_r = gluon.utils.split_and_load(test_r, ctx_list=ctx, even_split=False)
+
+        prediction += [net(w, d, r).asnumpy() for w, d, r in zip(test_w, test_d, test_r)]
+        print('predicting testing set batch %s / %s' % (index + 1,
+                                                        test_loader_length))
+    prediction = np.concatenate(prediction, 0)
+    return prediction
+
+
+def evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
     '''
     compute MAE, RMSE, MAPE scores of the prediction
     for 3, 6, 12 points on testing set

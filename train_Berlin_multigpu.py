@@ -15,9 +15,9 @@ from mxnet import gluon
 from mxnet import autograd
 from mxboard import SummaryWriter
 
-from lib.utils import compute_val_loss, evaluate, predict
-from lib.data_preparation import read_and_generate_dataset
-from model.model_config import get_backbones
+from lib.utils import compute_val_loss_multigpu, evaluate_multigpu, predict_multigpu
+from lib.data_preparation import read_and_generate_dataset, read_and_generate_dataset_from_files
+from model.model_config import get_backbones, get_backbones_traffic4cast
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str,
@@ -39,8 +39,10 @@ data_config = config['Data']
 training_config = config['Training']
 
 adj_filename = data_config['adj_filename']
-graph_signal_matrix_filename = data_config['graph_signal_matrix_filename']
-num_of_vertices = int(data_config['num_of_vertices'])
+node_pos_filename = data_config['node_pos_filename']
+data_dir = data_config['data_dir']
+
+# num_of_vertices = int(data_config['num_of_vertices'])
 points_per_hour = int(data_config['points_per_hour'])
 num_for_predict = int(data_config['num_for_predict'])
 
@@ -55,12 +57,16 @@ num_of_days = int(training_config['num_of_days'])
 num_of_hours = int(training_config['num_of_hours'])
 merge = bool(int(training_config['merge']))
 
+n_gpu = mx.context.num_gpus()
 # select devices
-if ctx.startswith('cpu'):
-    ctx = mx.cpu()
-elif ctx.startswith('gpu'):
-    ctx = mx.gpu(int(ctx[ctx.index('-') + 1:]))
-    print("using GPU: ", ctx)
+# if ctx.startswith('cpu'):
+#     ctx = mx.cpu()
+# elif ctx.startswith('gpu'):
+#     ctx = mx.gpu(int(ctx[ctx.index('-') + 1:]))
+#     print("using GPU: ", ctx)
+ctx = [mx.gpu(i) for i in range(n_gpu)] if n_gpu >= 1 else \
+          [mx.cpu()]
+
 
 # import model
 print('Model is %s' % (model_name))
@@ -103,17 +109,28 @@ class MyInit(mx.init.Initializer):
 if __name__ == "__main__":
     # read all data from graph signal matrix file
     print("Reading data...")
-    all_data = read_and_generate_dataset(graph_signal_matrix_filename,
-                                         num_of_weeks,
-                                         num_of_days,
-                                         num_of_hours,
-                                         num_for_predict,
-                                         points_per_hour,
-                                         merge)
+    node_pos = np.load(node_pos_filename)
+    num_of_vertices = node_pos.shape[0]
+    all_data = read_and_generate_dataset_from_files(data_dir,
+                                                    node_pos,
+                                                    num_of_weeks,
+                                                    num_of_days,
+                                                    num_of_hours,
+                                                    num_for_predict,
+                                                    points_per_hour,
+                                                    merge)
 
-    # test set ground truth
-    true_value = (all_data['test']['target'].transpose((0, 2, 1))
+    # test set ground truth,
+    # the original target shape is (#batch, #vertices, #pred)
+    # the transposed target shape is (#batch, #pred, #vertices)
+    true_value = (all_data['test']['target'].transpose((0, 2, 3, 1))
                   .reshape(all_data['test']['target'].shape[0], -1))
+
+    # reshape the target data for all sets
+    all_data['train']['target'] = all_data['train']['target'].reshape(
+        all_data['train']['target'].shape[0], all_data['train']['target'].shape[1], -1)
+    all_data['val']['target'] = all_data['val']['target'].reshape(
+        all_data['val']['target'].shape[0], all_data['val']['target'].shape[1], -1)
 
     # training set data loader
     train_loader = gluon.data.DataLoader(
@@ -164,15 +181,23 @@ if __name__ == "__main__":
 
     # loss function MSE
     loss_function = gluon.loss.L2Loss()
-
+    metric = mx.metric.MSE()
     # get model's structure
-    all_backbones = get_backbones(args.config, adj_filename, ctx)
+    ctx1 = ctx[0]
+    all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
 
     net = model(num_for_predict, all_backbones)
-    net.initialize(ctx=ctx)
-    for val_w, val_d, val_r, val_t in val_loader:
-        net([val_w, val_d, val_r])
-        break
+    # net.initialize(ctx=ctx)
+    # for val_w, val_d, val_r, val_t in val_loader:
+    #     # convert into cuda
+    #     val_w = val_w.as_in_context(ctx)
+    #     val_d = val_d.as_in_context(ctx)
+    #     val_r = val_r.as_in_context(ctx)
+    #     val_t = val_t.as_in_context(ctx)
+    #
+    #     net([val_w, val_d, val_r])
+    #     break
+
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
 
     # initialize a trainer to train model
@@ -183,36 +208,45 @@ if __name__ == "__main__":
     sw = SummaryWriter(logdir=params_path, flush_secs=5)
 
     # compute validation loss before training
-    compute_val_loss(net, val_loader, loss_function, sw, epoch=0)
+    compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch=0, ctx=ctx)
 
     # compute testing set MAE, RMSE, MAPE before training
-    evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0)
+    evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch=0, ctx=ctx)
 
     # train model
     global_step = 1
     for epoch in range(1, epochs + 1):
 
         for train_w, train_d, train_r, train_t in train_loader:
-
+            actual_batch_size = train_w.shape[0]
+            # running on multi-gpus
+            train_w = gluon.utils.split_and_load(train_w, ctx_list=ctx, even_split=False)
+            train_d = gluon.utils.split_and_load(train_d, ctx_list=ctx, even_split=False)
+            train_r = gluon.utils.split_and_load(train_r, ctx_list=ctx, even_split=False)
+            train_t = gluon.utils.split_and_load(train_t, ctx_list=ctx, even_split=False)
             start_time = time()
-            train_w = train_w.as_in_context(ctx)
-            train_d = train_d.as_in_context(ctx)
-            train_r = train_r.as_in_context(ctx)
-            train_t = train_t.as_in_context(ctx)
-
             with autograd.record():
-                output = net([train_w, train_d, train_r])
-                l = loss_function(output, train_t)
-            l.backward()
-            trainer.step(train_t.shape[0])
-            training_loss = l.mean().asscalar()
+                outputs = [net(w, d, r) for w, d, r in zip(train_w, train_d, train_r)]
+                losses = [loss_function(o, l) for o, l in zip(outputs, train_t)]
+            for loss in losses:
+                loss.backward()
+
+            # update metric for each output
+            for label, o in zip(train_t, outputs):
+                metric.update(label, o)
+
+            # Update the parameters by stepping the trainer; the batch size
+            # is required to normalize the gradients by `1 / batch_size`.
+            trainer.step(batch_size=actual_batch_size, ignore_stale_grad=True)
+
+            name, acc = metric.get()
 
             sw.add_scalar(tag='training_loss',
-                          value=training_loss,
+                          value=acc,
                           global_step=global_step)
 
             print('global step: %s, training loss: %.2f, time: %.2fs'
-                  % (global_step, training_loss, time() - start_time))
+                  % (global_step, acc, time() - start_time))
             global_step += 1
 
         # logging the gradients of parameters for checking convergence
@@ -226,10 +260,10 @@ if __name__ == "__main__":
                 print("can't plot histogram of {}_grad".format(name))
 
         # compute validation loss
-        compute_val_loss(net, val_loader, loss_function, sw, epoch)
+        compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx=ctx)
 
         # evaluate the model on testing set
-        evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch)
+        evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx=ctx)
 
         params_filename = os.path.join(params_path,
                                        '%s_epoch_%s.params' % (model_name,
@@ -243,7 +277,7 @@ if __name__ == "__main__":
     if 'prediction_filename' in training_config:
         prediction_path = training_config['prediction_filename']
 
-        prediction = predict(net, test_loader)
+        prediction = predict_multigpu(net, test_loader, ctx=ctx)
 
         np.savez_compressed(
             os.path.normpath(prediction_path),
