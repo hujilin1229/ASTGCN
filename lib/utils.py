@@ -338,7 +338,7 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
         val_t = gluon.utils.split_and_load(val_t, ctx_list=ctx, even_split=False)
 
-        outputs = [net(w, d, r) for w, d, r in zip(val_w, val_d, val_r)]
+        outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
         losses = [loss_function(o, l) for o, l in zip(outputs, val_t)]
         losses = [l.asnumpy() for l in losses]
         tmp.extend(losses)
@@ -375,7 +375,7 @@ def predict_multigpu(net, test_loader, ctx):
         test_d = gluon.utils.split_and_load(test_d, ctx_list=ctx, even_split=False)
         test_r = gluon.utils.split_and_load(test_r, ctx_list=ctx, even_split=False)
 
-        prediction += [net(w, d, r).asnumpy() for w, d, r in zip(test_w, test_d, test_r)]
+        prediction += [net([w, d, r]).asnumpy() for w, d, r in zip(test_w, test_d, test_r)]
         print('predicting testing set batch %s / %s' % (index + 1,
                                                         test_loader_length))
     prediction = np.concatenate(prediction, 0)

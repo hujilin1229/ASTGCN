@@ -227,7 +227,7 @@ if __name__ == "__main__":
             train_t = gluon.utils.split_and_load(train_t, ctx_list=ctx, even_split=False)
             start_time = time()
             with autograd.record():
-                outputs = [net(w, d, r) for w, d, r in zip(train_w, train_d, train_r)]
+                outputs = [net([w, d, r]) for w, d, r in zip(train_w, train_d, train_r)]
                 losses = [loss_function(o, l) for o, l in zip(outputs, train_t)]
             for loss in losses:
                 loss.backward()
