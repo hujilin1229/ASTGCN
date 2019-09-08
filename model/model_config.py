@@ -4,6 +4,7 @@ import configparser
 
 from mxnet import nd
 import numpy as np
+import scipy.sparse as sp
 from lib.utils import scaled_Laplacian, cheb_polynomial, get_adjacency_matrix
 
 
@@ -92,7 +93,7 @@ def get_backbones_traffic4cast(config_filename, adj_filename, ctx):
     num_of_days = int(config['Training']['num_of_days'])
     num_of_hours = int(config['Training']['num_of_hours'])
 
-    adj_mx = np.load(adj_filename).toarray()
+    adj_mx = sp.load_npz(adj_filename).toarray()
     # adj_mx = get_adjacency_matrix(adj_filename, num_of_vertices)
     L_tilde = scaled_Laplacian(adj_mx)
     cheb_polynomials = [nd.array(i, ctx=ctx)
