@@ -57,14 +57,15 @@ num_of_days = int(training_config['num_of_days'])
 num_of_hours = int(training_config['num_of_hours'])
 merge = bool(int(training_config['merge']))
 
-n_gpu = mx.context.num_gpus()
+# n_gpu = mx.context.num_gpus()
+gpus = [int(x) for x in os.environ["CUDA_VISIBLE_DEVICES"].split(',')]
 # select devices
 # if ctx.startswith('cpu'):
 #     ctx = mx.cpu()
 # elif ctx.startswith('gpu'):
 #     ctx = mx.gpu(int(ctx[ctx.index('-') + 1:]))
 #     print("using GPU: ", ctx)
-ctx = [mx.gpu(i) for i in range(n_gpu)] if n_gpu >= 1 else \
+ctx = [mx.gpu(i) for i in gpus] if len(gpus) >= 1 else \
           [mx.cpu()]
 
 
