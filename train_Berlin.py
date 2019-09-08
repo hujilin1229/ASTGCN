@@ -131,10 +131,10 @@ if __name__ == "__main__":
     # training set data loader
     train_loader = gluon.data.DataLoader(
                         gluon.data.ArrayDataset(
-                            nd.array(all_data['train']['week'], ctx=ctx),
-                            nd.array(all_data['train']['day'], ctx=ctx),
-                            nd.array(all_data['train']['recent'], ctx=ctx),
-                            nd.array(all_data['train']['target'], ctx=ctx)
+                            nd.array(all_data['train']['week']),
+                            nd.array(all_data['train']['day']),
+                            nd.array(all_data['train']['recent']),
+                            nd.array(all_data['train']['target'])
                         ),
                         batch_size=batch_size,
                         shuffle=True
@@ -143,10 +143,10 @@ if __name__ == "__main__":
     # validation set data loader
     val_loader = gluon.data.DataLoader(
                     gluon.data.ArrayDataset(
-                        nd.array(all_data['val']['week'], ctx=ctx),
-                        nd.array(all_data['val']['day'], ctx=ctx),
-                        nd.array(all_data['val']['recent'], ctx=ctx),
-                        nd.array(all_data['val']['target'], ctx=ctx)
+                        nd.array(all_data['val']['week']),
+                        nd.array(all_data['val']['day']),
+                        nd.array(all_data['val']['recent']),
+                        nd.array(all_data['val']['target'])
                     ),
                     batch_size=batch_size,
                     shuffle=False
@@ -155,10 +155,10 @@ if __name__ == "__main__":
     # testing set data loader
     test_loader = gluon.data.DataLoader(
                     gluon.data.ArrayDataset(
-                        nd.array(all_data['test']['week'], ctx=ctx),
-                        nd.array(all_data['test']['day'], ctx=ctx),
-                        nd.array(all_data['test']['recent'], ctx=ctx),
-                        nd.array(all_data['test']['target'], ctx=ctx)
+                        nd.array(all_data['test']['week']),
+                        nd.array(all_data['test']['day']),
+                        nd.array(all_data['test']['recent']),
+                        nd.array(all_data['test']['target'])
                     ),
                     batch_size=batch_size,
                     shuffle=False
@@ -184,6 +184,12 @@ if __name__ == "__main__":
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
     for val_w, val_d, val_r, val_t in val_loader:
+        # convert into cuda
+        val_w = val_w.as_in_context(ctx)
+        val_d = val_d.as_in_context(ctx)
+        val_r = val_r.as_in_context(ctx)
+        val_t = val_t.as_in_context(ctx)
+
         net([val_w, val_d, val_r])
         break
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
@@ -196,16 +202,20 @@ if __name__ == "__main__":
     sw = SummaryWriter(logdir=params_path, flush_secs=5)
 
     # compute validation loss before training
-    compute_val_loss(net, val_loader, loss_function, sw, epoch=0)
+    compute_val_loss(net, val_loader, loss_function, sw, epoch=0, ctx=ctx)
 
     # compute testing set MAE, RMSE, MAPE before training
-    evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0)
+    evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0, ctx=ctx)
 
     # train model
     global_step = 1
     for epoch in range(1, epochs + 1):
 
         for train_w, train_d, train_r, train_t in train_loader:
+            train_w = train_w.as_in_context(ctx)
+            train_d = train_d.as_in_context(ctx)
+            train_r = train_r.as_in_context(ctx)
+            train_t = train_t.as_in_context(ctx)
 
             start_time = time()
 
@@ -235,10 +245,10 @@ if __name__ == "__main__":
                 print("can't plot histogram of {}_grad".format(name))
 
         # compute validation loss
-        compute_val_loss(net, val_loader, loss_function, sw, epoch)
+        compute_val_loss(net, val_loader, loss_function, sw, epoch, ctx=ctx)
 
         # evaluate the model on testing set
-        evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch)
+        evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx=ctx)
 
         params_filename = os.path.join(params_path,
                                        '%s_epoch_%s.params' % (model_name,

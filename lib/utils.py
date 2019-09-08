@@ -195,7 +195,7 @@ def cheb_polynomial(L_tilde, K):
     return cheb_polynomials
 
 
-def compute_val_loss(net, val_loader, loss_function, sw, epoch):
+def compute_val_loss(net, val_loader, loss_function, sw, epoch, ctx):
     '''
     compute mean loss on validation set
 
@@ -215,6 +215,11 @@ def compute_val_loss(net, val_loader, loss_function, sw, epoch):
     val_loader_length = len(val_loader)
     tmp = []
     for index, (val_w, val_d, val_r, val_t) in enumerate(val_loader):
+        val_w = val_w.as_in_context(ctx)
+        val_d = val_d.as_in_context(ctx)
+        val_r = val_r.as_in_context(ctx)
+        val_t = val_t.as_in_context(ctx)
+
         output = net([val_w, val_d, val_r])
         l = loss_function(output, val_t)
         tmp.extend(l.asnumpy().tolist())
@@ -228,7 +233,7 @@ def compute_val_loss(net, val_loader, loss_function, sw, epoch):
     print('epoch: %s, validation loss: %.2f' % (epoch, validation_loss))
 
 
-def predict(net, test_loader):
+def predict(net, test_loader, ctx):
     '''
     predict
 
@@ -248,6 +253,10 @@ def predict(net, test_loader):
     test_loader_length = len(test_loader)
     prediction = []
     for index, (test_w, test_d, test_r, _) in enumerate(test_loader):
+        test_w = test_w.as_in_context(ctx)
+        test_d = test_d.as_in_context(ctx)
+        test_r = test_r.as_in_context(ctx)
+
         prediction.append(net([test_w, test_d, test_r]).asnumpy())
         print('predicting testing set batch %s / %s' % (index + 1,
                                                         test_loader_length))
@@ -255,7 +264,7 @@ def predict(net, test_loader):
     return prediction
 
 
-def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch):
+def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
     '''
     compute MAE, RMSE, MAPE scores of the prediction
     for 3, 6, 12 points on testing set
@@ -276,7 +285,7 @@ def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch):
     epoch: int, current epoch
 
     '''
-    prediction = predict(net, test_loader)
+    prediction = predict(net, test_loader, ctx)
     prediction = (prediction.transpose((0, 2, 1))
                   .reshape(prediction.shape[0], -1))
     for i in [3, 6, 12]:
