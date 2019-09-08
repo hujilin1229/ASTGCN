@@ -60,6 +60,7 @@ if ctx.startswith('cpu'):
     ctx = mx.cpu()
 elif ctx.startswith('gpu'):
     ctx = mx.gpu(int(ctx[ctx.index('-') + 1:]))
+    print("using GPU: ", ctx)
 
 # import model
 print('Model is %s' % (model_name))
