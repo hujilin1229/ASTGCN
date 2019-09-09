@@ -124,11 +124,11 @@ class cheb_conv_with_SAt(nn.Block):
             for k in range(self.K):
 
                 # shape of T_k is (V, V)
-                T_k = self.cheb_polynomials[k].as_in_context(cur_context)
+                T_k = self.cheb_polynomials[k].asnumpy().as_in_context(cur_context)
                 # print("T_K: ", T_k)
 
                 # shape of T_k_with_at is (batch_size, V, V)
-                T_k_with_at = (T_k * spatial_attention).tostype('csr')
+                T_k_with_at = T_k * spatial_attention
                 # T_k_with_at = T_k.as_in_context(cur_context) * spatial_attention
 
                 # print("T_k_with_at: ", T_k_with_at)
@@ -140,7 +140,7 @@ class cheb_conv_with_SAt(nn.Block):
                 #                    graph_signal)
                 print("T_k_with_at: ", T_k_with_at)
                 print("graph signal: ", graph_signal)
-                rhs = nd.batch_dot(T_k_with_at.asnumpy(), graph_signal)
+                rhs = nd.batch_dot(T_k_with_at, graph_signal)
                 print("rhs: ", rhs)
                 print("theta_k: ", theta_k)
                 output = output + nd.dot(rhs, theta_k)
