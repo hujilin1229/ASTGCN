@@ -392,7 +392,7 @@ class ASTGCN(nn.Block):
 
         '''
 
-        for x_i in x:
+        for x_i in x[:3]:
             print(x_i.shape)
         x_list = x[:3]
         cheb_polynomials = x[3:]
