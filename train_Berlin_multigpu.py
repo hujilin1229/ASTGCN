@@ -216,10 +216,12 @@ if __name__ == "__main__":
     sw = SummaryWriter(logdir=params_path, flush_secs=5)
 
     # compute validation loss before training
-    compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch=0, ctx=ctx)
+    compute_val_loss_multigpu(net, val_loader, loss_function, sw,
+                              epoch=0, ctx=ctx, cheb_polynomials=cheb_polynomials)
 
     # compute testing set MAE, RMSE, MAPE before training
-    evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch=0, ctx=ctx)
+    evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw,
+                      epoch=0, ctx=ctx, cheb_polynomials=cheb_polynomials)
 
     # train model
     global_step = 1
@@ -268,10 +270,12 @@ if __name__ == "__main__":
                 print("can't plot histogram of {}_grad".format(name))
 
         # compute validation loss
-        compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx=ctx)
+        compute_val_loss_multigpu(net, val_loader, loss_function, sw,
+                                  epoch, ctx=ctx, cheb_polynomials=cheb_polynomials)
 
         # evaluate the model on testing set
-        evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx=ctx)
+        evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw,
+                          epoch, ctx=ctx, cheb_polynomials=cheb_polynomials)
 
         params_filename = os.path.join(params_path,
                                        '%s_epoch_%s.params' % (model_name,
