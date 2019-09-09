@@ -321,7 +321,7 @@ class ASTGCN_submodule(nn.Block):
         mx.ndarray, shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
-        x = self.blocks(x, ctx)
+        x = self.blocks(x)
         module_output = (self.final_conv(x.transpose((0, 3, 1, 2)))
                          [:, :, :, -1].transpose((0, 2, 1)))
         _, num_of_vertices, num_for_prediction = module_output.shape
@@ -358,7 +358,7 @@ class ASTGCN(nn.Block):
                     ASTGCN_submodule(num_for_prediction, backbones))
                 self.register_child(self.submodules[-1])
 
-    def forward(self, x_list, ctx):
+    def forward(self, x_list):
         '''
         Parameters
         ----------
@@ -372,11 +372,12 @@ class ASTGCN(nn.Block):
                shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
-        if len(x_list) != len(self.submodules):
+        ctx = x_list[-1]
+        if len(x_list[:-1]) != len(self.submodules):
             raise ValueError("num of submodule not equals to "
                              "length of the input list")
 
-        num_of_vertices_set = {i.shape[1] for i in x_list}
+        num_of_vertices_set = {i.shape[1] for i in x_list[:-1]}
         if len(num_of_vertices_set) != 1:
             raise ValueError("Different num_of_vertices detected! "
                              "Check if your input data have same size"
@@ -387,6 +388,6 @@ class ASTGCN(nn.Block):
             raise ValueError("Input values must have same batch size!")
 
         submodule_outputs = [self.submodules[idx](x_list[idx], ctx)
-                             for idx in range(len(x_list))]
+                             for idx in range(len(x_list[:-1]))]
 
         return nd.add_n(*submodule_outputs)
