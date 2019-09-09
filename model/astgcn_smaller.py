@@ -412,7 +412,11 @@ class ASTGCN(nn.Block):
         if len(batch_size_set) != 1:
             raise ValueError("Input values must have same batch size!")
 
-        submodule_outputs = [self.submodules[idx]([x_list[idx]]+cheb_polynomials)
-                             for idx in range(len(x_list))]
+        submodule_outputs = []
+        for idx in range(len(x_list)):
+            print(idx, x_list[idx].shape)
+            submodule_outputs.append(self.submodules[idx]([x_list[idx]]+cheb_polynomials))
+        # submodule_outputs = [self.submodules[idx]([x_list[idx]]+cheb_polynomials)
+        #                      for idx in range(len(x_list))]
 
         return nd.add_n(*submodule_outputs)
