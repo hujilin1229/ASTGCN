@@ -343,7 +343,7 @@ class ASTGCN(nn.Block):
     '''
     ASTGCN, 3 sub-modules, for hour, day, week respectively
     '''
-    def __init__(self, num_for_prediction, all_backbones, ctx, **kwargs):
+    def __init__(self, num_for_prediction, all_backbones, **kwargs):
         '''
         Parameters
         ----------
