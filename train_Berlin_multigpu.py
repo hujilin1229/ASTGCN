@@ -194,12 +194,13 @@ if __name__ == "__main__":
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
     print(net, flush=True)
+    print(net.collect_params(), flush=True)
 
     for index, (val_w, val_d, val_r, _) in enumerate(val_loader):
         val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
         val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
-        outputs = [net([w, d, r, ctx]) for w, d, r in zip(val_w, val_d, val_r)]
+        outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
 
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
 
@@ -230,7 +231,7 @@ if __name__ == "__main__":
             train_t = gluon.utils.split_and_load(train_t, ctx_list=ctx, even_split=False)
             start_time = time()
             with autograd.record():
-                outputs = [net([w, d, r, ctx]) for w, d, r in zip(train_w, train_d, train_r)]
+                outputs = [net([w, d, r]) for w, d, r in zip(train_w, train_d, train_r)]
                 losses = [loss_function(o, l) for o, l in zip(outputs, train_t)]
             for loss in losses:
                 loss.backward()
