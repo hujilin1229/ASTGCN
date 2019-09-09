@@ -193,6 +193,7 @@ if __name__ == "__main__":
     # kwargs = {'ctx': ctx}
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
+    net.collect_params().initialize(ctx=ctx)
     print(net, flush=True)
     print(net.collect_params(), flush=True)
 
