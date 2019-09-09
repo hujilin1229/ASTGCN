@@ -288,15 +288,15 @@ def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
     prediction = predict(net, test_loader, ctx)
     prediction = (prediction.transpose((0, 2, 1))
                   .reshape(prediction.shape[0], -1))
-    for i in [3, 6, 12]:
+    for i in [0, 1, 2]:
         print('current epoch: %s, predict %s points' % (epoch, i))
 
-        mae = mean_absolute_error(true_value[:, : i * num_of_vertices],
-                                  prediction[:, : i * num_of_vertices])
-        rmse = mean_squared_error(true_value[:, : i * num_of_vertices],
-                                  prediction[:, : i * num_of_vertices]) ** 0.5
-        mape = masked_mape_np(true_value[:, : i * num_of_vertices],
-                              prediction[:, : i * num_of_vertices], 0)
+        mae = mean_absolute_error(true_value[:, i * num_of_vertices: (i + 1) * num_of_vertices],
+                                  prediction[:, i * num_of_vertices: (i + 1) * num_of_vertices])
+        rmse = mean_squared_error(true_value[:, i * num_of_vertices: (i + 1) * num_of_vertices],
+                                  prediction[:, i * num_of_vertices: (i + 1) * num_of_vertices]) ** 0.5
+        mape = masked_mape_np(true_value[:, i * num_of_vertices: (i + 1) * num_of_vertices],
+                              prediction[:, i * num_of_vertices: (i + 1) * num_of_vertices], 0)
 
         print('MAE: %.2f' % (mae))
         print('RMSE: %.2f' % (rmse))
