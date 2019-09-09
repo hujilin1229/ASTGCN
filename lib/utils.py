@@ -313,7 +313,7 @@ def evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
                       global_step=epoch)
 
 
-def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
+def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx, cheb_polynomials):
     '''
     compute mean loss on validation set
 
@@ -337,7 +337,7 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
         val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
         val_t = gluon.utils.split_and_load(val_t, ctx_list=ctx, even_split=False)
-        outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
+        outputs = [net([w, d, r]+ cheb_polynomials) for w, d, r in zip(val_w, val_d, val_r)]
         losses = [loss_function(o, l) for o, l in zip(outputs, val_t)]
 
         # l = loss_function(output, val_t)
@@ -362,7 +362,7 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
                   global_step=epoch)
     print('epoch: %s, validation loss: %.2f' % (epoch, validation_loss))
 
-def predict_multigpu(net, test_loader, ctx):
+def predict_multigpu(net, test_loader, ctx, cheb_polynomials):
     '''
     predict
 
@@ -386,14 +386,14 @@ def predict_multigpu(net, test_loader, ctx):
         test_d = gluon.utils.split_and_load(test_d, ctx_list=ctx, even_split=False)
         test_r = gluon.utils.split_and_load(test_r, ctx_list=ctx, even_split=False)
 
-        prediction += [net([w, d, r]).asnumpy() for w, d, r in zip(test_w, test_d, test_r)]
+        prediction += [net([w, d, r] + cheb_polynomials).asnumpy() for w, d, r in zip(test_w, test_d, test_r)]
         print('predicting testing set batch %s / %s' % (index + 1,
                                                         test_loader_length))
     prediction = np.concatenate(prediction, 0)
     return prediction
 
 
-def evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx):
+def evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx, cheb_polynomials):
     '''
     compute MAE, RMSE, MAPE scores of the prediction
     for 3, 6, 12 points on testing set
@@ -414,7 +414,7 @@ def evaluate_multigpu(net, test_loader, true_value, num_of_vertices, sw, epoch, 
     epoch: int, current epoch
 
     '''
-    prediction = predict_multigpu(net, test_loader, ctx)
+    prediction = predict_multigpu(net, test_loader, ctx, cheb_polynomials)
     prediction = (prediction.transpose((0, 2, 1))
                   .reshape(prediction.shape[0], -1))
     for i in [0, 1, 2]:
