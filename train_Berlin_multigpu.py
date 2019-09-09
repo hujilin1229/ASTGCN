@@ -190,8 +190,8 @@ if __name__ == "__main__":
     all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
 
     """Model initialization."""
-    kwargs = {'ctx': ctx}
-    net = model(num_for_predict, all_backbones, **kwargs)
+    # kwargs = {'ctx': ctx}
+    net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
 
     for index, (val_w, val_d, val_r, _) in enumerate(val_loader):
