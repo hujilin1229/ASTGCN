@@ -323,7 +323,7 @@ class ASTGCN_submodule(nn.Block):
                 kernel_size=(1, backbones[-1]['num_of_time_filters']))
             self.W = self.params.get("W", allow_deferred_init=True)
 
-    def forward(self, x, cheb_polynomials):
+    def forward(self, x):
         '''
         Parameters
         ----------
@@ -336,7 +336,8 @@ class ASTGCN_submodule(nn.Block):
         mx.ndarray, shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
-        x = self.blocks([x, cheb_polynomials])
+
+        x = self.blocks(x)
         module_output = (self.final_conv(x.transpose((0, 3, 1, 2)))
                          [:, :, :, -1].transpose((0, 2, 1)))
         _, num_of_vertices, num_for_prediction = module_output.shape
@@ -408,7 +409,7 @@ class ASTGCN(nn.Block):
         if len(batch_size_set) != 1:
             raise ValueError("Input values must have same batch size!")
 
-        submodule_outputs = [self.submodules[idx](x=x_list[idx], cheb_polynomials=cheb_polynomials)
+        submodule_outputs = [self.submodules[idx]([x_list[idx], cheb_polynomials])
                              for idx in range(len(x_list))]
 
         return nd.add_n(*submodule_outputs)
