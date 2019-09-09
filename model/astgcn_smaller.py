@@ -257,7 +257,7 @@ class ASTGCN_block(nn.Block):
                 strides=(1, time_conv_strides))
             self.ln = nn.LayerNorm(axis=2)
 
-    def forward(self, x_cheb_polynomials):
+    def forward(self, x, cheb_polynomials):
         '''
         Parameters
         ----------
@@ -269,10 +269,9 @@ class ASTGCN_block(nn.Block):
 
         '''
 
-        print(len(x_cheb_polynomials), flush=True)
-
-        x = x_cheb_polynomials[0]
-        cheb_polynomials = x_cheb_polynomials[1:]
+        # print(len(x_cheb_polynomials), flush=True)
+        # x = x_cheb_polynomials[0]
+        # cheb_polynomials = x_cheb_polynomials[1:]
         (batch_size, num_of_vertices,
          num_of_features, num_of_timesteps) = x.shape
         # shape is (batch_size, T, T)
@@ -296,7 +295,7 @@ class ASTGCN_block(nn.Block):
         x_residual = (self.residual_conv(x.transpose((0, 2, 1, 3)))
                       .transpose((0, 2, 1, 3)))
 
-        return self.ln(nd.relu(x_residual + time_conv_output))
+        return self.ln(nd.relu(x_residual + time_conv_output)), cheb_polynomials
 
 
 class ASTGCN_submodule(nn.Block):
@@ -326,7 +325,7 @@ class ASTGCN_submodule(nn.Block):
                 kernel_size=(1, backbones[-1]['num_of_time_filters']))
             self.W = self.params.get("W", allow_deferred_init=True)
 
-    def forward(self, x):
+    def forward(self, x, cheb_polynomials):
         '''
         Parameters
         ----------
@@ -340,7 +339,7 @@ class ASTGCN_submodule(nn.Block):
 
         '''
 
-        x = self.blocks(x)
+        x, _ = self.blocks(x, cheb_polynomials)
         module_output = (self.final_conv(x.transpose((0, 3, 1, 2)))
                          [:, :, :, -1].transpose((0, 2, 1)))
         _, num_of_vertices, num_for_prediction = module_output.shape
@@ -415,7 +414,7 @@ class ASTGCN(nn.Block):
         submodule_outputs = []
         for idx in range(len(x_list)):
             print(idx, x_list[idx].shape)
-            submodule_outputs.append(self.submodules[idx]([x_list[idx]]+cheb_polynomials))
+            submodule_outputs.append(self.submodules[idx]([x_list[idx], cheb_polynomials]))
         # submodule_outputs = [self.submodules[idx]([x_list[idx]]+cheb_polynomials)
         #                      for idx in range(len(x_list))]
 
