@@ -49,7 +49,7 @@ points_per_hour = int(data_config['points_per_hour'])
 num_for_predict = int(data_config['num_for_predict'])
 
 model_name = training_config['model_name']
-ctx = training_config['ctx']
+# ctx = training_config['ctx']
 optimizer = training_config['optimizer']
 learning_rate = float(training_config['learning_rate'])
 epochs = int(training_config['epochs'])
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     # kwargs = {'ctx': ctx}
     net = model(num_for_predict, all_backbones, ctx)
     net.initialize(ctx=ctx)
-    net.collect_params().initialize(ctx=ctx)
+    # net.collect_params().initialize(ctx=ctx)
     # print(net, flush=True)
     # print(net.collect_params(), flush=True)
 

@@ -340,10 +340,17 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
 
         outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
         losses = [loss_function(o, l) for o, l in zip(outputs, val_t)]
-        losses = [l.asnumpy() for l in losses]
-        tmp.extend(losses)
+
+        # l = loss_function(output, val_t)
+        # tmp.extend(l.asnumpy().tolist())
+        list_losses = []
+        print("num of losses is ", len(losses))
+        for l in losses:
+            list_losses.extend(l.asnumpy().tolist())
+
+        tmp.extend(list_losses)
         print('validation batch %s / %s, loss: %.2f' % (
-            index + 1, val_loader_length, l.mean().asscalar()))
+            index + 1, val_loader_length, np.mean(list_losses)))
 
     validation_loss = sum(tmp) / len(tmp)
     sw.add_scalar(tag='validation_loss',
