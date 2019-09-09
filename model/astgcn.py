@@ -45,16 +45,16 @@ class Spatial_Attention_layer(nn.Block):
         # print("spatial context", context.current_context())
         # compute spatial attention scores
         # shape of lhs is (batch_size, V, T)
-        lhs = nd.dot(nd.dot(x, self.W_1.data(ctx)), self.W_2.data(ctx))
+        lhs = nd.dot(nd.dot(x, self.W_1.data()), self.W_2.data())
 
         # shape of rhs is (batch_size, T, V)
-        rhs = nd.dot(self.W_3.data(ctx), x.transpose((2, 0, 3, 1)))
+        rhs = nd.dot(self.W_3.data(), x.transpose((2, 0, 3, 1)))
 
         # shape of product is (batch_size, V, V)
         product = nd.batch_dot(lhs, rhs)
 
-        S = nd.dot(self.V_s.data(ctx),
-                   nd.sigmoid(product + self.b_s.data(ctx))
+        S = nd.dot(self.V_s.data(),
+                   nd.sigmoid(product + self.b_s.data())
                      .transpose((1, 2, 0))).transpose((2, 0, 1))
 
         # normalization
@@ -125,7 +125,7 @@ class cheb_conv_with_SAt(nn.Block):
                 T_k_with_at = T_k * spatial_attention
 
                 # shape of theta_k is (F, num_of_filters)
-                theta_k = self.Theta.data(ctx)[k]
+                theta_k = self.Theta.data()[k]
 
                 # shape is (batch_size, V, F)
                 rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)),
@@ -149,7 +149,7 @@ class Temporal_Attention_layer(nn.Block):
             self.b_e = self.params.get('b_e', allow_deferred_init=True)
             self.V_e = self.params.get('V_e', allow_deferred_init=True)
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         '''
         Parameters
         ----------
@@ -187,16 +187,16 @@ class Temporal_Attention_layer(nn.Block):
         # context.current_context()
         # print("temporal context", context.current_context())
 
-        lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data(ctx)),
-                     self.U_2.data(ctx))
+        lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data()),
+                     self.U_2.data())
 
         # shape is (N, V, T)
-        rhs = nd.dot(self.U_3.data(ctx), x.transpose((2, 0, 1, 3)))
+        rhs = nd.dot(self.U_3.data(), x.transpose((2, 0, 1, 3)))
 
         product = nd.batch_dot(lhs, rhs)
 
-        E = nd.dot(self.V_e.data(ctx),
-                   nd.sigmoid(product + self.b_e.data(ctx))
+        E = nd.dot(self.V_e.data(),
+                   nd.sigmoid(product + self.b_e.data())
                      .transpose((1, 2, 0))).transpose((2, 0, 1))
 
         # normailzation
@@ -245,7 +245,7 @@ class ASTGCN_block(nn.Block):
                 strides=(1, time_conv_strides))
             self.ln = nn.LayerNorm(axis=2)
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         '''
         Parameters
         ----------
@@ -259,7 +259,7 @@ class ASTGCN_block(nn.Block):
         (batch_size, num_of_vertices,
          num_of_features, num_of_timesteps) = x.shape
         # shape is (batch_size, T, T)
-        temporal_At = self.TAt(x, ctx)
+        temporal_At = self.TAt(x)
 
         x_TAt = nd.batch_dot(x.reshape(batch_size, -1, num_of_timesteps),
                              temporal_At)\
@@ -267,7 +267,7 @@ class ASTGCN_block(nn.Block):
                            num_of_features, num_of_timesteps)
 
         # cheb gcn with spatial attention
-        spatial_At = self.SAt(x_TAt, ctx)
+        spatial_At = self.SAt(x_TAt)
         spatial_gcn = self.cheb_conv_SAt(x, spatial_At)
 
         # convolution along time axis
@@ -308,7 +308,7 @@ class ASTGCN_submodule(nn.Block):
                 kernel_size=(1, backbones[-1]['num_of_time_filters']))
             self.W = self.params.get("W", allow_deferred_init=True)
 
-    def forward(self, x, ctx):
+    def forward(self, x):
         '''
         Parameters
         ----------
@@ -321,13 +321,13 @@ class ASTGCN_submodule(nn.Block):
         mx.ndarray, shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
-        x = self.blocks(x, ctx)
+        x = self.blocks(x)
         module_output = (self.final_conv(x.transpose((0, 3, 1, 2)))
                          [:, :, :, -1].transpose((0, 2, 1)))
         _, num_of_vertices, num_for_prediction = module_output.shape
         self.W.shape = (num_of_vertices, num_for_prediction)
         self.W._finish_deferred_init()
-        return module_output * self.W.data(ctx)
+        return module_output * self.W.data()
 
 
 class ASTGCN(nn.Block):
@@ -372,22 +372,21 @@ class ASTGCN(nn.Block):
                shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
-        ctx = x_list[-1]
-        if len(x_list[:-1]) != len(self.submodules):
+        if len(x_list) != len(self.submodules):
             raise ValueError("num of submodule not equals to "
                              "length of the input list")
 
-        num_of_vertices_set = {i.shape[1] for i in x_list[:-1]}
+        num_of_vertices_set = {i.shape[1] for i in x_list}
         if len(num_of_vertices_set) != 1:
             raise ValueError("Different num_of_vertices detected! "
                              "Check if your input data have same size"
                              "at axis 1.")
 
-        batch_size_set = {i.shape[0] for i in x_list[:-1]}
+        batch_size_set = {i.shape[0] for i in x_list}
         if len(batch_size_set) != 1:
             raise ValueError("Input values must have same batch size!")
 
-        submodule_outputs = [self.submodules[idx](x_list[idx], ctx)
-                             for idx in range(len(x_list[:-1]))]
+        submodule_outputs = [self.submodules[idx](x_list[idx])
+                             for idx in range(len(x_list))]
 
         return nd.add_n(*submodule_outputs)

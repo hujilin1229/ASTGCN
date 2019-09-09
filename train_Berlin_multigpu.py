@@ -193,6 +193,7 @@ if __name__ == "__main__":
     # kwargs = {'ctx': ctx}
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
+    print(net, flush=True)
 
     for index, (val_w, val_d, val_r, _) in enumerate(val_loader):
         val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
