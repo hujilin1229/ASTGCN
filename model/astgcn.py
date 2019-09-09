@@ -364,7 +364,7 @@ class ASTGCN(nn.Block):
                 #     ASTGCN_submodule(num_for_prediction, backbones))
                 self.submodules.add(
                     ASTGCN_submodule(num_for_prediction, backbones))
-                # self.register_child(self.submodules[-1])
+                self.register_child(self.submodules[-1])
 
     def forward(self, x_list):
         '''
