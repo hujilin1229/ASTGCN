@@ -239,7 +239,6 @@ class ASTGCN_block(nn.Block):
         num_of_chev_filters = backbone['num_of_chev_filters']
         num_of_time_filters = backbone['num_of_time_filters']
         time_conv_strides = backbone['time_conv_strides']
-        # cheb_polynomials = backbone["cheb_polynomials"]
 
         with self.name_scope():
             self.SAt = Spatial_Attention_layer()
@@ -388,6 +387,7 @@ class ASTGCN(nn.Block):
                shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
+
         if len(x_list) != len(self.submodules):
             raise ValueError("num of submodule not equals to "
                              "length of the input list")
