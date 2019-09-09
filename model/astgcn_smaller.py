@@ -376,7 +376,7 @@ class ASTGCN(nn.Block):
                     ASTGCN_submodule(num_for_prediction, backbones))
                 self.register_child(self.submodules[-1])
 
-    def forward(self, x_list, cheb_polynomials):
+    def forward(self, x):
         '''
         Parameters
         ----------
@@ -390,6 +390,9 @@ class ASTGCN(nn.Block):
                shape is (batch_size, num_of_vertices, num_for_prediction)
 
         '''
+
+        x_list = x[:3]
+        cheb_polynomials = x[3:]
 
         if len(x_list) != len(self.submodules):
             raise ValueError("num of submodule not equals to "
