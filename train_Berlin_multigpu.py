@@ -187,7 +187,7 @@ if __name__ == "__main__":
     metric = mx.metric.MSE()
     # get model's structure
     ctx1 = ctx[0]
-    all_backbones, cheb_polynomials = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
+    all_backbones, cheb_polynomials = get_backbones_traffic4cast(args.config, adj_filename)
 
 
     """Model initialization."""
