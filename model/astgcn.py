@@ -126,7 +126,7 @@ class cheb_conv_with_SAt(nn.Block):
                 T_k = self.cheb_polynomials[k]
 
                 # shape of T_k_with_at is (batch_size, V, V)
-                T_k_with_at = T_k * spatial_attention
+                T_k_with_at = T_k.as_in_context(cur_context) * spatial_attention
 
                 # shape of theta_k is (F, num_of_filters)
                 theta_k = self.Theta.data(cur_context)[k]
