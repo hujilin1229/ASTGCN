@@ -202,6 +202,7 @@ if __name__ == "__main__":
         val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
         outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
+        print("test printing: ", outputs[0])
 
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
 
