@@ -27,7 +27,7 @@ parser.add_argument("--force", type=str, default=False,
 args = parser.parse_args()
 
 
-os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = '0'
+# os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = '0'
 # mxboard log dir
 if os.path.exists('logs'):
     shutil.rmtree('logs')
