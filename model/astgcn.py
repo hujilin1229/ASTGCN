@@ -8,10 +8,9 @@ class Spatial_Attention_layer(nn.Block):
     '''
     compute spatial attention scores
     '''
-    def __init__(self, ctx, **kwargs):
+    def __init__(self, **kwargs):
         super(Spatial_Attention_layer, self).__init__(**kwargs)
 
-        self._ctx = ctx
         with self.name_scope():
             self.W_1 = self.params.get('W_1', allow_deferred_init=True)
             self.W_2 = self.params.get('W_2', allow_deferred_init=True)
@@ -44,19 +43,20 @@ class Spatial_Attention_layer(nn.Block):
         for param in [self.W_1, self.W_2, self.W_3, self.b_s, self.V_s]:
             param._finish_deferred_init()
 
+        cur_context = x.context
         # print("spatial context", context.current_context())
         # compute spatial attention scores
         # shape of lhs is (batch_size, V, T)
-        lhs = nd.dot(nd.dot(x, self.W_1.data(self._ctx)), self.W_2.data(self._ctx))
+        lhs = nd.dot(nd.dot(x, self.W_1.data(cur_context)), self.W_2.data(cur_context))
 
         # shape of rhs is (batch_size, T, V)
-        rhs = nd.dot(self.W_3.data(self._ctx), x.transpose((2, 0, 3, 1)))
+        rhs = nd.dot(self.W_3.data(cur_context), x.transpose((2, 0, 3, 1)))
 
         # shape of product is (batch_size, V, V)
         product = nd.batch_dot(lhs, rhs)
 
-        S = nd.dot(self.V_s.data(self._ctx),
-                   nd.sigmoid(product + self.b_s.data(self._ctx))
+        S = nd.dot(self.V_s.data(cur_context),
+                   nd.sigmoid(product + self.b_s.data(cur_context))
                      .transpose((1, 2, 0))).transpose((2, 0, 1))
 
         # normalization
@@ -112,6 +112,8 @@ class cheb_conv_with_SAt(nn.Block):
         self.Theta.shape = (self.K, num_of_features, self.num_of_filters)
         self.Theta._finish_deferred_init()
 
+        cur_context = x.context
+
         outputs = []
         for time_step in range(num_of_timesteps):
             # shape is (batch_size, V, F)
@@ -127,7 +129,7 @@ class cheb_conv_with_SAt(nn.Block):
                 T_k_with_at = T_k * spatial_attention
 
                 # shape of theta_k is (F, num_of_filters)
-                theta_k = self.Theta.data(self._ctx)[k]
+                theta_k = self.Theta.data(cur_context)[k]
 
                 # shape is (batch_size, V, F)
                 rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)),
@@ -142,11 +144,8 @@ class Temporal_Attention_layer(nn.Block):
     '''
     compute temporal attention scores
     '''
-    def __init__(self, ctx, **kwargs):
+    def __init__(self, **kwargs):
         super(Temporal_Attention_layer, self).__init__(**kwargs)
-
-        self._ctx = ctx
-        print("context ids", self._ctx)
 
         with self.name_scope():
             self.U_1 = self.params.get('U_1', allow_deferred_init=True)
@@ -193,16 +192,17 @@ class Temporal_Attention_layer(nn.Block):
         # context.current_context()
         # print("temporal context", context.current_context())
 
-        lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data(self._ctx)),
-                     self.U_2.data(self._ctx))
+        cur_context = x.context
+        lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data(cur_context)),
+                     self.U_2.data(cur_context))
 
         # shape is (N, V, T)
-        rhs = nd.dot(self.U_3.data(self._ctx), x.transpose((2, 0, 1, 3)))
+        rhs = nd.dot(self.U_3.data(cur_context), x.transpose((2, 0, 1, 3)))
 
         product = nd.batch_dot(lhs, rhs)
 
-        E = nd.dot(self.V_e.data(self._ctx),
-                   nd.sigmoid(product + self.b_e.data(self._ctx))
+        E = nd.dot(self.V_e.data(cur_context),
+                   nd.sigmoid(product + self.b_e.data(cur_context))
                      .transpose((1, 2, 0))).transpose((2, 0, 1))
 
         # normailzation
@@ -213,7 +213,7 @@ class Temporal_Attention_layer(nn.Block):
 
 
 class ASTGCN_block(nn.Block):
-    def __init__(self, backbone, ctx, **kwargs):
+    def __init__(self, backbone, **kwargs):
         '''
         Parameters
         ----------
@@ -234,12 +234,12 @@ class ASTGCN_block(nn.Block):
         cheb_polynomials = backbone["cheb_polynomials"]
 
         with self.name_scope():
-            self.SAt = Spatial_Attention_layer(ctx)
+            self.SAt = Spatial_Attention_layer()
             self.cheb_conv_SAt = cheb_conv_with_SAt(
                 num_of_filters=num_of_chev_filters,
                 K=K,
                 cheb_polynomials=cheb_polynomials)
-            self.TAt = Temporal_Attention_layer(ctx)
+            self.TAt = Temporal_Attention_layer()
             self.time_conv = nn.Conv2D(
                 channels=num_of_time_filters,
                 kernel_size=(1, 3),
@@ -291,7 +291,7 @@ class ASTGCN_submodule(nn.Block):
     '''
     a module in ASTGCN
     '''
-    def __init__(self, num_for_prediction, backbones, ctx, **kwargs):
+    def __init__(self, num_for_prediction, backbones, **kwargs):
         '''
         Parameters
         ----------
@@ -302,10 +302,9 @@ class ASTGCN_submodule(nn.Block):
         '''
         super(ASTGCN_submodule, self).__init__(**kwargs)
 
-        self._ctx = ctx
         self.blocks = nn.Sequential()
         for backbone in backbones:
-            self.blocks.add(ASTGCN_block(backbone, ctx))
+            self.blocks.add(ASTGCN_block(backbone))
 
         with self.name_scope():
             # use convolution to generate the prediction
@@ -334,7 +333,10 @@ class ASTGCN_submodule(nn.Block):
         _, num_of_vertices, num_for_prediction = module_output.shape
         self.W.shape = (num_of_vertices, num_for_prediction)
         self.W._finish_deferred_init()
-        return module_output * self.W.data(self._ctx)
+
+        cur_context = module_output.context
+
+        return module_output * self.W.data(cur_context)
 
 
 class ASTGCN(nn.Block):
@@ -362,7 +364,7 @@ class ASTGCN(nn.Block):
                 # self.submodules.append(
                 #     ASTGCN_submodule(num_for_prediction, backbones))
                 self.submodules.add(
-                    ASTGCN_submodule(num_for_prediction, backbones, ctx))
+                    ASTGCN_submodule(num_for_prediction, backbones))
                 self.register_child(self.submodules[-1])
 
     def forward(self, x_list):
