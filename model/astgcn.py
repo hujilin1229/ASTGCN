@@ -356,12 +356,15 @@ class ASTGCN(nn.Block):
             raise ValueError("The length of all_backbones "
                              "must be greater than 0")
 
-        self.submodules = []
+        # self.submodules = []
+        self.submodules = nn.Sequential()
         with self.name_scope():
             for backbones in all_backbones:
-                self.submodules.append(
+                # self.submodules.append(
+                #     ASTGCN_submodule(num_for_prediction, backbones))
+                self.submodules.add(
                     ASTGCN_submodule(num_for_prediction, backbones))
-                self.register_child(self.submodules[-1])
+                # self.register_child(self.submodules[-1])
 
     def forward(self, x_list):
         '''
