@@ -383,7 +383,7 @@ class ASTGCN(nn.Block):
                              "Check if your input data have same size"
                              "at axis 1.")
 
-        batch_size_set = {i.shape[0] for i in x_list}
+        batch_size_set = {i.shape[0] for i in x_list[:-1]}
         if len(batch_size_set) != 1:
             raise ValueError("Input values must have same batch size!")
 
