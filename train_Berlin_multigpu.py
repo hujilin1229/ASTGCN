@@ -191,11 +191,11 @@ if __name__ == "__main__":
 
     """Model initialization."""
     # kwargs = {'ctx': ctx}
-    net = model(num_for_predict, all_backbones)
+    net = model(num_for_predict, all_backbones,ctx)
     net.initialize(ctx=ctx)
     net.collect_params().initialize(ctx=ctx)
-    print(net, flush=True)
-    print(net.collect_params(), flush=True)
+    # print(net, flush=True)
+    # print(net.collect_params(), flush=True)
 
     for index, (val_w, val_d, val_r, _) in enumerate(val_loader):
         val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
