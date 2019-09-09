@@ -239,7 +239,7 @@ class ASTGCN_block(nn.Block):
         num_of_chev_filters = backbone['num_of_chev_filters']
         num_of_time_filters = backbone['num_of_time_filters']
         time_conv_strides = backbone['time_conv_strides']
-        cheb_polynomials = backbone["cheb_polynomials"]
+        # cheb_polynomials = backbone["cheb_polynomials"]
 
         with self.name_scope():
             self.SAt = Spatial_Attention_layer()
