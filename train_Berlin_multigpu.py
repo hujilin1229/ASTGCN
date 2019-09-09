@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
     """Model initialization."""
     # kwargs = {'ctx': ctx}
-    net = model(num_for_predict, all_backbones,ctx)
+    net = model(num_for_predict, all_backbones, ctx)
     net.initialize(ctx=ctx)
     net.collect_params().initialize(ctx=ctx)
     # print(net, flush=True)

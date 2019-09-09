@@ -146,6 +146,8 @@ class Temporal_Attention_layer(nn.Block):
         super(Temporal_Attention_layer, self).__init__(**kwargs)
 
         self._ctx = ctx
+        print("context ids", self._ctx)
+
         with self.name_scope():
             self.U_1 = self.params.get('U_1', allow_deferred_init=True)
             self.U_2 = self.params.get('U_2', allow_deferred_init=True)
