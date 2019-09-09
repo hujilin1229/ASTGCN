@@ -125,19 +125,20 @@ class cheb_conv_with_SAt(nn.Block):
 
                 # shape of T_k is (V, V)
                 T_k = self.cheb_polynomials[k].as_in_context(cur_context)
-                print("T_K: ", T_k)
+                # print("T_K: ", T_k)
 
                 # shape of T_k_with_at is (batch_size, V, V)
                 T_k_with_at = (T_k * spatial_attention).tostype('csr')
                 # T_k_with_at = T_k.as_in_context(cur_context) * spatial_attention
 
-                print("T_k_with_at: ", T_k_with_at)
+                # print("T_k_with_at: ", T_k_with_at)
                 # shape of theta_k is (F, num_of_filters)
                 theta_k = self.Theta.data(cur_context)[k]
 
                 # shape is (batch_size, V, F)
-                rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)).tostype('csr'),
-                                   graph_signal)
+                # rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)).tostype('csr'),
+                #                    graph_signal)
+                rhs = nd.batch_dot(T_k_with_at, graph_signal)
                 print("rhs: ", rhs)
                 print("theta_k: ", theta_k)
                 output = output + nd.dot(rhs, theta_k)
