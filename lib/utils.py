@@ -346,8 +346,8 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
         list_losses = []
         print("num of losses is ", len(losses))
         for l in losses:
+            print(l)
             print("len of l: ", len(l.asnumpy().tolist()))
-            print(l.asnumpy())
             list_losses.extend(l.asnumpy().tolist())
 
         tmp.extend(list_losses)
