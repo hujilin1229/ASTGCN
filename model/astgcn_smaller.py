@@ -269,12 +269,14 @@ class ASTGCN_block(nn.Block):
 
         '''
 
-        print(len(x_cheb_polynomials))
+        print(len(x_cheb_polynomials), flush=True)
+
         x = x_cheb_polynomials[0]
-        cheb_polynomials = x_cheb_polynomials[1]
+        cheb_polynomials = x_cheb_polynomials[1:]
         (batch_size, num_of_vertices,
          num_of_features, num_of_timesteps) = x.shape
         # shape is (batch_size, T, T)
+
         temporal_At = self.TAt(x)
 
         x_TAt = nd.batch_dot(x.reshape(batch_size, -1, num_of_timesteps),
@@ -393,8 +395,6 @@ class ASTGCN(nn.Block):
 
         '''
 
-        for x_i in x[:3]:
-            print(x_i.shape)
         x_list = x[:3]
         cheb_polynomials = x[3:]
 
@@ -412,7 +412,7 @@ class ASTGCN(nn.Block):
         if len(batch_size_set) != 1:
             raise ValueError("Input values must have same batch size!")
 
-        submodule_outputs = [self.submodules[idx]([x_list[idx], cheb_polynomials])
+        submodule_outputs = [self.submodules[idx]([x_list[idx]]+cheb_polynomials)
                              for idx in range(len(x_list))]
 
         return nd.add_n(*submodule_outputs)
