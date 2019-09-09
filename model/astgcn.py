@@ -138,6 +138,8 @@ class cheb_conv_with_SAt(nn.Block):
                 # shape is (batch_size, V, F)
                 # rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)).tostype('csr'),
                 #                    graph_signal)
+                print("T_k_with_at: ", T_k_with_at)
+                print("graph signal: ", graph_signal)
                 rhs = nd.batch_dot(T_k_with_at.array(), graph_signal)
                 print("rhs: ", rhs)
                 print("theta_k: ", theta_k)
