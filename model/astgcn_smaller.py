@@ -414,7 +414,7 @@ class ASTGCN(nn.Block):
 
         submodule_outputs = []
         for idx in range(len(x_list)):
-            print(idx, x_list[idx].shape)
+            # print(idx, x_list[idx].shape)
             submodule_outputs.append(self.submodules[idx](x_list[idx], cheb_polynomials))
         # submodule_outputs = [self.submodules[idx]([x_list[idx]]+cheb_polynomials)
         #                      for idx in range(len(x_list))]
