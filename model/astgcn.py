@@ -140,7 +140,7 @@ class cheb_conv_with_SAt(nn.Block):
                 #                    graph_signal)
                 print("T_k_with_at: ", T_k_with_at)
                 print("graph signal: ", graph_signal)
-                rhs = nd.batch_dot(T_k_with_at.array(), graph_signal)
+                rhs = nd.batch_dot(T_k_with_at.asnumpy(), graph_signal)
                 print("rhs: ", rhs)
                 print("theta_k: ", theta_k)
                 output = output + nd.dot(rhs, theta_k)
