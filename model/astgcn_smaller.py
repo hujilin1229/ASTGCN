@@ -269,6 +269,7 @@ class ASTGCN_block(nn.Block):
 
         '''
 
+        print(len(x_cheb_polynomials))
         x = x_cheb_polynomials[0]
         cheb_polynomials = x_cheb_polynomials[1]
         (batch_size, num_of_vertices,
