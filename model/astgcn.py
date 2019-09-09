@@ -134,7 +134,7 @@ class cheb_conv_with_SAt(nn.Block):
                 theta_k = self.Theta.data(cur_context)[k]
 
                 # shape is (batch_size, V, F)
-                rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)),
+                rhs = nd.batch_dot(T_k_with_at.transpose((0, 2, 1)).tostype('csr'),
                                    graph_signal)
 
                 output = output + nd.dot(rhs, theta_k)
