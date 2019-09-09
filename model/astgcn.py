@@ -124,7 +124,7 @@ class cheb_conv_with_SAt(nn.Block):
             for k in range(self.K):
 
                 # shape of T_k is (V, V)
-                T_k = self.cheb_polynomials[k].tostype('NDArray').as_in_context(cur_context)
+                T_k = self.cheb_polynomials[k].tostype('default').as_in_context(cur_context)
                 # print("T_K: ", T_k)
 
                 # shape of T_k_with_at is (batch_size, V, V)
