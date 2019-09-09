@@ -43,7 +43,7 @@ class Spatial_Attention_layer(nn.Block):
         for param in [self.W_1, self.W_2, self.W_3, self.b_s, self.V_s]:
             param._finish_deferred_init()
 
-        print("spatial context", context.current_context())
+        # print("spatial context", context.current_context())
         # compute spatial attention scores
         # shape of lhs is (batch_size, V, T)
         lhs = nd.dot(nd.dot(x, self.W_1.data()), self.W_2.data())
@@ -186,7 +186,7 @@ class Temporal_Attention_layer(nn.Block):
         # compute temporal attention scores
         # shape is (N, T, V)
         # context.current_context()
-        print("temporal context", context.current_context())
+        # print("temporal context", context.current_context())
 
         lhs = nd.dot(nd.dot(x.transpose((0, 3, 2, 1)), self.U_1.data()),
                      self.U_2.data())
