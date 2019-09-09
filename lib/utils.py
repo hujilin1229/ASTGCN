@@ -338,6 +338,8 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
         val_t = gluon.utils.split_and_load(val_t, ctx_list=ctx, even_split=False)
 
+        print("val_w: ", val_w)
+
         outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
         losses = [loss_function(o, l) for o, l in zip(outputs, val_t)]
 
@@ -345,6 +347,7 @@ def compute_val_loss_multigpu(net, val_loader, loss_function, sw, epoch, ctx):
         # tmp.extend(l.asnumpy().tolist())
         list_losses = []
         print("outputs: ", outputs[0])
+        print("label: ", val_t[0])
         print("num of losses is ", len(losses))
         for l in losses:
             print(l)
