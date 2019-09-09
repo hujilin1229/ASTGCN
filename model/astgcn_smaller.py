@@ -339,7 +339,7 @@ class ASTGCN_submodule(nn.Block):
 
         '''
 
-        x, _ = self.blocks(x, cheb_polynomials)
+        x, cheb_polynomials = self.blocks(x, cheb_polynomials)
         module_output = (self.final_conv(x.transpose((0, 3, 1, 2)))
                          [:, :, :, -1].transpose((0, 2, 1)))
         _, num_of_vertices, num_for_prediction = module_output.shape
