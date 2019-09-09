@@ -271,6 +271,7 @@ class ASTGCN_block(nn.Block):
 
         x = x_cheb_polynomials[0]
         cheb_polynomials = x_cheb_polynomials[1]
+        print(x)
         (batch_size, num_of_vertices,
          num_of_features, num_of_timesteps) = x.shape
         # shape is (batch_size, T, T)
