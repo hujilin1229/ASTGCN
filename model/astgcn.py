@@ -3,7 +3,6 @@
 
 from mxnet import nd
 from mxnet.gluon import nn
-from mxnet.gluon.parameter import context
 
 class Spatial_Attention_layer(nn.Block):
     '''
@@ -17,6 +16,10 @@ class Spatial_Attention_layer(nn.Block):
             self.W_3 = self.params.get('W_3', allow_deferred_init=True)
             self.b_s = self.params.get('b_s', allow_deferred_init=True)
             self.V_s = self.params.get('V_s', allow_deferred_init=True)
+        print("=========================")
+        print("Context of Variables")
+        print(" D1::{0}, D2::{1}".format(self.W_1.data().context, self.W_2.data().context))
+        print("=========================")
 
     def forward(self, x):
         '''
@@ -149,6 +152,10 @@ class Temporal_Attention_layer(nn.Block):
             self.U_3 = self.params.get('U_3', allow_deferred_init=True)
             self.b_e = self.params.get('b_e', allow_deferred_init=True)
             self.V_e = self.params.get('V_e', allow_deferred_init=True)
+        print("=========================")
+        print("Context of Variables")
+        print(" D1::{0}, D2::{1}".format(self.U_1.data().context, self.U_2.data().context))
+        print("=========================")
 
     def forward(self, x):
         '''
