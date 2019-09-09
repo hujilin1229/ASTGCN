@@ -189,17 +189,21 @@ if __name__ == "__main__":
     ctx1 = ctx[0]
     all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
 
-    net = model(num_for_predict, all_backbones)
+    """Model initialization."""
+    kwargs = {'ctx': ctx}
+    net = model(num_for_predict, all_backbones, **kwargs)
     net.initialize(ctx=ctx)
+
     for index, (val_w, val_d, val_r, _) in enumerate(val_loader):
         val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
         val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
-        outputs = [net([w, d, r], ctx=ctx) for w, d, r in zip(val_w, val_d, val_r)]
+        outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
 
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
 
     # initialize a trainer to train model
+    net.collect_params().reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), optimizer,
                             {'learning_rate': learning_rate})
 
