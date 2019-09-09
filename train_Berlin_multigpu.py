@@ -76,7 +76,7 @@ print('Model is %s' % (model_name))
 if model_name == 'MSTGCN':
     from model.mstgcn import MSTGCN as model
 elif model_name == 'ASTGCN':
-    from model.astgcn import ASTGCN as model
+    from model.astgcn_smaller import ASTGCN as model
 else:
     raise SystemExit('Wrong type of model!')
 
@@ -187,7 +187,8 @@ if __name__ == "__main__":
     metric = mx.metric.MSE()
     # get model's structure
     ctx1 = ctx[0]
-    all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
+    all_backbones, cheb_polynomials = get_backbones_traffic4cast(args.config, adj_filename, ctx1)
+
 
     """Model initialization."""
     # kwargs = {'ctx': ctx}
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         val_w = gluon.utils.split_and_load(val_w, ctx_list=ctx, even_split=False)
         val_d = gluon.utils.split_and_load(val_d, ctx_list=ctx, even_split=False)
         val_r = gluon.utils.split_and_load(val_r, ctx_list=ctx, even_split=False)
-        outputs = [net([w, d, r]) for w, d, r in zip(val_w, val_d, val_r)]
+        outputs = [net([w, d, r], cheb_polynomials) for w, d, r in zip(val_w, val_d, val_r)]
         print("test printing: ", outputs[0])
 
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
