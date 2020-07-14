@@ -179,7 +179,7 @@ if __name__ == "__main__":
     loss_function = gluon.loss.L2Loss()
     metric = mx.metric.Accuracy()
     # get model's structure
-    all_backbones = get_backbones_traffic4cast(args.config, adj_filename, ctx)
+    all_backbones = get_backbones_traffic4cast(args.config, adj_filename)
 
     net = model(num_for_predict, all_backbones)
     net.initialize(ctx=ctx)
