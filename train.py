@@ -183,7 +183,7 @@ if __name__ == "__main__":
     sw = SummaryWriter(logdir=params_path, flush_secs=5)
 
     # compute validation loss before training
-    compute_val_loss(net, val_loader, loss_function, sw, epoch=0)
+    compute_val_loss(net, val_loader, loss_function, sw, epoch=0, ctx=ctx)
 
     # compute testing set MAE, RMSE, MAPE before training
     evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0)
@@ -226,10 +226,10 @@ if __name__ == "__main__":
                 print("can't plot histogram of {}_grad".format(name))
 
         # compute validation loss
-        compute_val_loss(net, val_loader, loss_function, sw, epoch)
+        compute_val_loss(net, val_loader, loss_function, sw, epoch, ctx=ctx)
 
         # evaluate the model on testing set
-        evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch)
+        evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch, ctx=ctx)
 
         params_filename = os.path.join(params_path,
                                        '%s_epoch_%s.params' % (model_name,
