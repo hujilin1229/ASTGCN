@@ -169,10 +169,10 @@ if __name__ == "__main__":
     all_backbones = get_backbones(args.config, adj_filename, ctx)
 
     net = model(num_for_predict, all_backbones)
-    net.initialize(ctx=ctx)
-    for val_w, val_d, val_r, val_t in val_loader:
-        net([val_w, val_d, val_r])
-        break
+    # net.initialize(ctx=ctx)
+    # for val_w, val_d, val_r, val_t in val_loader:
+    #     net([val_w, val_d, val_r])
+    #     break
     net.initialize(ctx=ctx, init=MyInit(), force_reinit=True)
 
     # initialize a trainer to train model
