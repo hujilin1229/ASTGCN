@@ -186,7 +186,7 @@ if __name__ == "__main__":
     compute_val_loss(net, val_loader, loss_function, sw, epoch=0, ctx=ctx)
 
     # compute testing set MAE, RMSE, MAPE before training
-    evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0)
+    evaluate(net, test_loader, true_value, num_of_vertices, sw, epoch=0, ctx=ctx)
 
     # train model
     global_step = 1
